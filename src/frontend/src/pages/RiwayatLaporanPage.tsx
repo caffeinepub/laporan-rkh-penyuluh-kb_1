@@ -1,5 +1,5 @@
 import type { Identity } from "@icp-sdk/core/agent";
-import { Edit3, Printer } from "lucide-react";
+import { Edit3, Printer, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import type { RKH, UserProfile, backendInterface } from "../backend";
 
@@ -26,11 +26,50 @@ interface RiwayatLaporanPageProps {
   onEdit: (rkh: RKH) => void;
 }
 
-/** Render semua halaman PDF ke array data-URL gambar menggunakan pdfjs-dist */
+/** Muat pdfjs-dist dari CDN secara dinamis dan kembalikan referensi library */
+async function loadPdfjsLib(): Promise<any> {
+  if ((window as any).pdfjsLib) {
+    return (window as any).pdfjsLib;
+  }
+
+  const PDFJS_VERSION = "3.11.174";
+  const cdnUrls = [
+    `https://unpkg.com/pdfjs-dist@${PDFJS_VERSION}/build/pdf.min.js`,
+    `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDFJS_VERSION}/build/pdf.min.js`,
+    `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.min.js`,
+  ];
+
+  for (const src of cdnUrls) {
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = src;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error(`Failed to load ${src}`));
+        document.head.appendChild(script);
+      });
+      if ((window as any).pdfjsLib) break;
+    } catch (e) {
+      console.warn("CDN load failed, trying next:", e);
+    }
+  }
+
+  const lib = (window as any).pdfjsLib;
+  if (!lib) throw new Error("pdfjs-dist failed to load from all CDN sources");
+
+  const workerUrls = [
+    `https://unpkg.com/pdfjs-dist@${PDFJS_VERSION}/build/pdf.worker.min.js`,
+    `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDFJS_VERSION}/build/pdf.worker.min.js`,
+    `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.worker.min.js`,
+  ];
+  lib.GlobalWorkerOptions.workerSrc = workerUrls[0];
+
+  return lib;
+}
+
+/** Render semua halaman PDF ke array data-URL gambar menggunakan pdfjs-dist dari CDN */
 async function renderPdfToImages(pdfUrl: string): Promise<string[]> {
-  const pdfjsLib = await import("pdfjs-dist");
-  // Gunakan worker dari CDN supaya tidak perlu konfigurasi bundler
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+  const pdfjsLib = await loadPdfjsLib();
 
   const response = await fetch(pdfUrl);
   const arrayBuffer = await response.arrayBuffer();
@@ -70,6 +109,7 @@ export default function RiwayatLaporanPage({
   );
   const [printDocPageUrls, setPrintDocPageUrls] = useState<string[]>([]);
   const [preparingPrint, setPreparingPrint] = useState(false);
+  const [deletingAction, setDeletingAction] = useState<bigint | null>(null);
 
   const loadRKH = useCallback(async () => {
     setLoading(true);
@@ -122,12 +162,27 @@ export default function RiwayatLaporanPage({
     setTimeout(() => window.print(), 100);
   };
 
+  const handleDelete = async (rkh: RKH) => {
+    const confirmed = window.confirm(
+      "Hapus laporan ini? Tindakan tidak dapat dibatalkan.",
+    );
+    if (!confirmed) return;
+    setDeletingAction(rkh.action);
+    try {
+      await (actor as any).deleteRKH(rkh.action);
+      await loadRKH();
+    } catch (e) {
+      console.error("Gagal menghapus laporan:", e);
+    } finally {
+      setDeletingAction(null);
+    }
+  };
+
   const handlePrintSingle = async (rkh: RKH) => {
     setPreparingPrint(true);
     let imageDataUrl: string | null = null;
     let docPageUrls: string[] = [];
 
-    // Preload gambar
     if (rkh.image) {
       try {
         const url = rkh.image.getDirectURL();
@@ -143,7 +198,6 @@ export default function RiwayatLaporanPage({
       }
     }
 
-    // Render PDF lampiran ke gambar per halaman
     if (rkh.document) {
       try {
         const pdfUrl = rkh.document.getDirectURL();
@@ -158,7 +212,6 @@ export default function RiwayatLaporanPage({
     setPrintingRkh(rkh);
     setPreparingPrint(false);
 
-    // Tunggu React render ulang dengan data URL, baru print
     setTimeout(() => {
       window.print();
       setTimeout(() => {
@@ -327,7 +380,6 @@ export default function RiwayatLaporanPage({
 
     return (
       <div style={{ fontFamily: "Arial, sans-serif", fontSize: "10pt" }}>
-        {/* Header */}
         <div
           style={{
             display: "flex",
@@ -366,7 +418,6 @@ export default function RiwayatLaporanPage({
           </div>
         </div>
 
-        {/* Identitas */}
         <div style={sectionHeaderStyle}>IDENTITAS PENYULUH</div>
         <table
           style={{
@@ -399,7 +450,6 @@ export default function RiwayatLaporanPage({
           </tbody>
         </table>
 
-        {/* Detail */}
         <div style={sectionHeaderStyle}>DETAIL LAPORAN</div>
         <table
           style={{
@@ -418,7 +468,6 @@ export default function RiwayatLaporanPage({
           </tbody>
         </table>
 
-        {/* Daftar lampiran */}
         {totalAttachments > 0 && (
           <>
             <div style={sectionHeaderStyle}>LAMPIRAN</div>
@@ -456,7 +505,6 @@ export default function RiwayatLaporanPage({
           </>
         )}
 
-        {/* Tanda tangan */}
         <div
           style={{
             marginTop: "28px",
@@ -504,7 +552,6 @@ export default function RiwayatLaporanPage({
           </div>
         </div>
 
-        {/* Lampiran foto */}
         {hasImage && imageSrc && (
           <div style={{ pageBreakBefore: "always" }}>
             <div
@@ -528,7 +575,6 @@ export default function RiwayatLaporanPage({
           </div>
         )}
 
-        {/* Lampiran PDF — ditampilkan sebagai gambar per halaman */}
         {hasDocument &&
           pdfPages.length > 0 &&
           pdfPages.map((pageDataUrl, pageIdx) => (
@@ -564,7 +610,6 @@ export default function RiwayatLaporanPage({
             </div>
           ))}
 
-        {/* Fallback jika PDF gagal di-render */}
         {hasDocument && pdfPages.length === 0 && (
           <div style={{ pageBreakBefore: "always" }}>
             <div
@@ -593,7 +638,6 @@ export default function RiwayatLaporanPage({
 
   return (
     <div>
-      {/* Overlay loading saat persiapan print */}
       {preparingPrint && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg px-8 py-6 shadow-xl text-center">
@@ -606,7 +650,6 @@ export default function RiwayatLaporanPage({
         </div>
       )}
 
-      {/* Area print */}
       <div
         className="hidden print:block"
         style={{
@@ -718,7 +761,6 @@ export default function RiwayatLaporanPage({
         )}
       </div>
 
-      {/* Tampilan layar */}
       <div className="print:hidden">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-gray-800">
@@ -793,9 +835,17 @@ export default function RiwayatLaporanPage({
             </p>
           </div>
           {loading ? (
-            <div className="p-8 text-center text-gray-400">Memuat data...</div>
+            <div
+              className="p-8 text-center text-gray-400"
+              data-ocid="riwayat.loading_state"
+            >
+              Memuat data...
+            </div>
           ) : rkhList.length === 0 ? (
-            <div className="p-8 text-center text-gray-400">
+            <div
+              className="p-8 text-center text-gray-400"
+              data-ocid="riwayat.empty_state"
+            >
               Tidak ada laporan untuk periode ini
             </div>
           ) : (
@@ -877,6 +927,16 @@ export default function RiwayatLaporanPage({
                             data-ocid={`riwayat.edit_button.${idx + 1}`}
                           >
                             <Edit3 size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(rkh)}
+                            className="text-gray-400 hover:text-red-600 disabled:opacity-40"
+                            title="Hapus Laporan"
+                            disabled={deletingAction === rkh.action}
+                            data-ocid={`riwayat.delete_button.${idx + 1}`}
+                          >
+                            <Trash2 size={14} />
                           </button>
                         </div>
                       </td>

@@ -164,8 +164,24 @@ actor {
     allRKHData.add(caller, existingRKHData);
   };
 
+  // (3b) Delete RKH by action id
+  public shared ({ caller }) func deleteRKH(actionId : Action) : async () {
+    if (not (UserApproval.isApproved(approvalState, caller) or AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Token not verified. Please contact admin");
+    };
+
+    switch (allRKHData.get(caller)) {
+      case (?existingRKHData) {
+        let filtered = existingRKHData.filter(
+          func(rkh : RKH) : Bool { rkh.action != actionId }
+        );
+        allRKHData.add(caller, filtered);
+      };
+      case (null) {};
+    };
+  };
+
   public query ({ caller }) func getDayRKH(user : Principal, day : Time.Time) : async [RKH] {
-    // Authorization: users can only view their own data, admins can view all
     if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
       Runtime.trap("Unauthorized: Can only view your own RKH data");
     };
@@ -182,7 +198,6 @@ actor {
   };
 
   public query ({ caller }) func getWeekRKH(user : Principal, start : Time.Time, end : Time.Time) : async [RKH] {
-    // Authorization: users can only view their own data, admins can view all
     if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
       Runtime.trap("Unauthorized: Can only view your own RKH data");
     };
@@ -199,7 +214,6 @@ actor {
   };
 
   public query ({ caller }) func getMonthRKH(user : Principal, start : Time.Time, end : Time.Time) : async [RKH] {
-    // Authorization: users can only view their own data, admins can view all
     if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
       Runtime.trap("Unauthorized: Can only view your own RKH data");
     };
@@ -218,7 +232,6 @@ actor {
   };
 
   public query ({ caller }) func getYearRKH(user : Principal, start : Time.Time, end : Time.Time) : async [RKH] {
-    // Authorization: users can only view their own data, admins can view all
     if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
       Runtime.trap("Unauthorized: Can only view your own RKH data");
     };

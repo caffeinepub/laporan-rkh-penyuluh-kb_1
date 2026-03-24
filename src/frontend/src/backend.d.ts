@@ -79,6 +79,7 @@ export enum UserRole {
 export interface backendInterface {
     addRKH(rkh: RKH): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    deleteRKH(actionId: Action): Promise<void>;
     generateUserToken(user: Principal): Promise<string>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;

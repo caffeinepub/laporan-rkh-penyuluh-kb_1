@@ -16,7 +16,7 @@ const JABATAN_OPTIONS = [
 interface ProfilPageProps {
   actor: backendInterface;
   profile: UserProfile | null;
-  onSaved: (p: UserProfile) => void;
+  onSaved: (p?: UserProfile) => void;
 }
 
 export default function ProfilPage({
@@ -72,9 +72,14 @@ export default function ProfilPage({
     try {
       let sigBlob: import("../backend").ExternalBlob | null = null;
       if (sigFile) {
+        // New signature file selected — upload it
         const bytes = new Uint8Array(await sigFile.arrayBuffer());
         sigBlob = ExtBlob.fromBytes(bytes);
+      } else if (sigPreview && profile?.signature) {
+        // No new file but existing signature is still shown — preserve it
+        sigBlob = profile.signature;
       }
+      // If sigPreview is null, user explicitly removed signature — sigBlob stays null
       const profileData: Profile = {
         namalengkap: form.namalengkap,
         nip: form.nip,
@@ -84,7 +89,10 @@ export default function ProfilPage({
         phoneNumber: form.phoneNumber,
       };
       await actor.saveCallerProfile(profileData, sigBlob);
-      const updated: UserProfile = { ...profileData };
+      const updated: UserProfile = {
+        ...profileData,
+        signature: sigBlob ?? undefined,
+      };
       onSaved(updated);
       setSuccess(true);
     } catch (err) {

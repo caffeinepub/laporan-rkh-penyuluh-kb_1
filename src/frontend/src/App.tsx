@@ -167,7 +167,13 @@ export default function App() {
         <ProfilPage
           actor={actor!}
           profile={profile}
-          onSaved={(p) => setProfile(p)}
+          onSaved={async () => {
+            // Re-fetch profile from backend to ensure signature blob methods are intact
+            if (actor) {
+              const fresh = await actor.getCallerUserProfile();
+              if (fresh) setProfile(fresh);
+            }
+          }}
         />
       )}
       {currentPage === "admin" && isAdmin && (
