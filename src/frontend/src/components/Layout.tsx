@@ -41,15 +41,26 @@ export default function Layout({
       ]
     : menuItems;
 
+  const initials = profile?.namalengkap
+    ? profile.namalengkap
+        .split(" ")
+        .map((w) => w[0])
+        .slice(0, 2)
+        .join("")
+        .toUpperCase()
+    : "KB";
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-100">
       {/* Header */}
       <div className="bg-[#1a7a4a] text-white">
         <div className="flex items-center justify-between px-4 py-2">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-[#1a7a4a] font-bold text-xs">BKKBN</span>
-            </div>
+            <img
+              src="/assets/uploads/bkkbn-019d1e7a-bd36-77cf-b342-f26ff46cd60b-1.png"
+              alt="BKKBN Logo"
+              className="h-12 w-auto"
+            />
             <div className="text-xs hidden sm:block leading-tight">
               <div className="font-bold">BADAN KEPENDUDUKAN</div>
               <div>KELUARGA BERENCANA NASIONAL</div>
@@ -64,7 +75,9 @@ export default function Layout({
               <div className="opacity-80">NIP: {profile?.nip || ""}</div>
             </div>
             <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-[#1a7a4a] font-bold text-xs">KEMKES</span>
+              <span className="text-[#1a7a4a] font-bold text-xs">
+                {initials}
+              </span>
             </div>
           </div>
         </div>
@@ -137,9 +150,11 @@ export default function Layout({
           Penyuluh KB
         </p>
         <div className="flex items-center justify-center gap-2 mt-2">
-          <div className="w-8 h-8 bg-[#1a7a4a] rounded-full flex items-center justify-center">
-            <span className="text-white font-bold text-xs">BKKBN</span>
-          </div>
+          <img
+            src="/assets/uploads/bkkbn-019d1e7a-bd36-77cf-b342-f26ff46cd60b-1.png"
+            alt="BKKBN Logo"
+            className="h-10 w-auto"
+          />
         </div>
         <p className="text-white font-semibold mt-1">LAPORAN RKH PENYULUH KB</p>
         <p>Badan Kependudukan dan Keluarga Berencana Nasional</p>

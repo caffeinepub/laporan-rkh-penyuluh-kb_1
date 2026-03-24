@@ -7,18 +7,22 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     <div className="min-h-screen bg-gray-100 flex flex-col">
       {/* Header */}
       <div className="bg-[#1a7a4a] text-white py-3 px-6 flex items-center gap-4">
-        <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center">
-          <span className="text-[#1a7a4a] font-bold text-xs">BKKBN</span>
-        </div>
+        <img
+          src="/assets/uploads/bkkbn-019d1e7a-bd36-77cf-b342-f26ff46cd60b-1.png"
+          alt="BKKBN Logo"
+          className="h-12 w-auto"
+        />
         <h1 className="text-lg font-bold">SISTEM LAPORAN RKH PENYULUH KB</h1>
       </div>
 
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="bg-white rounded-lg shadow-md w-full max-w-md p-8">
           <div className="text-center mb-8">
-            <div className="w-20 h-20 bg-[#1a7a4a] rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-white font-bold text-xl">BKKBN</span>
-            </div>
+            <img
+              src="/assets/uploads/bkkbn-019d1e7a-bd36-77cf-b342-f26ff46cd60b-1.png"
+              alt="BKKBN Logo"
+              className="h-20 w-auto mx-auto mb-4"
+            />
             <h2 className="text-xl font-bold text-gray-800">
               Laporan RKH Penyuluh KB
             </h2>
@@ -38,6 +42,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           </div>
 
           <button
+            type="button"
             onClick={onLogin}
             className="w-full bg-[#1a7a4a] hover:bg-green-800 text-white font-semibold py-3 px-4 rounded-lg transition-colors text-sm"
           >

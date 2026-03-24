@@ -156,6 +156,7 @@ export default function App() {
           actor={actor!}
           identity={identity!}
           profile={profile}
+          isAdmin={isAdmin}
           onEdit={(rkh) => {
             setEditingRkh(rkh);
             setCurrentPage("input-laporan");

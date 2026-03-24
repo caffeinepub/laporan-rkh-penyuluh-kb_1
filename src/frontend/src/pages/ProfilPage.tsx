@@ -122,10 +122,14 @@ export default function ProfilPage({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="namalengkap"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Nama Lengkap <span className="text-red-500">*</span>
               </label>
               <input
+                id="namalengkap"
                 type="text"
                 value={form.namalengkap}
                 onChange={(e) =>
@@ -135,10 +139,14 @@ export default function ProfilPage({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="nip"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 NIP <span className="text-red-500">*</span>
               </label>
               <input
+                id="nip"
                 type="text"
                 value={form.nip}
                 onChange={(e) => setForm({ ...form, nip: e.target.value })}
@@ -146,10 +154,14 @@ export default function ProfilPage({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="jabatan"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Jabatan <span className="text-red-500">*</span>
               </label>
               <select
+                id="jabatan"
                 value={form.jabatan}
                 onChange={(e) => setForm({ ...form, jabatan: e.target.value })}
                 className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-green-500"
@@ -163,10 +175,14 @@ export default function ProfilPage({
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="unitkerja"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Unit Kerja <span className="text-red-500">*</span>
               </label>
               <input
+                id="unitkerja"
                 type="text"
                 value={form.unitKerja}
                 onChange={(e) =>
@@ -176,10 +192,14 @@ export default function ProfilPage({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="wilayahkerja"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Wilayah Kerja <span className="text-red-500">*</span>
               </label>
               <input
+                id="wilayahkerja"
                 type="text"
                 value={form.wilayahKerja}
                 onChange={(e) =>
@@ -189,10 +209,14 @@ export default function ProfilPage({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="nomorhp"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Nomor HP <span className="text-red-500">*</span>
               </label>
               <input
+                id="nomorhp"
                 type="tel"
                 value={form.phoneNumber}
                 onChange={(e) =>

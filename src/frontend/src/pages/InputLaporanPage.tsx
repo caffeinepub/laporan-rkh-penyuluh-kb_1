@@ -1,5 +1,5 @@
 import { Upload, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { ExternalBlob, RKH, backendInterface } from "../backend";
 import { ExternalBlob as ExtBlob } from "../backend";
 
@@ -10,6 +10,11 @@ interface InputLaporanPageProps {
   onCancel: () => void;
 }
 
+const parseKegiatan = (ca: string) => {
+  const parts = ca.split("||");
+  return { kegiatan: parts[0] || "", hasil: parts[1] || "" };
+};
+
 export default function InputLaporanPage({
   actor,
   editingRkh,
@@ -17,11 +22,6 @@ export default function InputLaporanPage({
   onCancel,
 }: InputLaporanPageProps) {
   const isEdit = editingRkh !== null;
-
-  const parseKegiatan = (ca: string) => {
-    const parts = ca.split("||");
-    return { kegiatan: parts[0] || "", hasil: parts[1] || "" };
-  };
 
   const [form, setForm] = useState({
     tanggal: new Date().toISOString().split("T")[0],
@@ -37,7 +37,7 @@ export default function InputLaporanPage({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
+  const initForm = useCallback(() => {
     if (editingRkh) {
       const { kegiatan, hasil } = parseKegiatan(editingRkh.completedAction);
       const dateMs = Number(editingRkh.date / BigInt(1_000_000));
@@ -54,6 +54,10 @@ export default function InputLaporanPage({
       });
     }
   }, [editingRkh]);
+
+  useEffect(() => {
+    initForm();
+  }, [initForm]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,10 +133,14 @@ export default function InputLaporanPage({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="tanggal"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Tanggal Kegiatan <span className="text-red-500">*</span>
               </label>
               <input
+                id="tanggal"
                 type="date"
                 value={form.tanggal}
                 onChange={(e) => setForm({ ...form, tanggal: e.target.value })}
@@ -142,10 +150,14 @@ export default function InputLaporanPage({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="kegiatan"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Kegiatan <span className="text-red-500">*</span>
             </label>
             <textarea
+              id="kegiatan"
               value={form.kegiatan}
               onChange={(e) => setForm({ ...form, kegiatan: e.target.value })}
               rows={2}
@@ -156,10 +168,14 @@ export default function InputLaporanPage({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="sasaran"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Sasaran <span className="text-red-500">*</span>
               </label>
               <input
+                id="sasaran"
                 type="text"
                 value={form.sasaran}
                 onChange={(e) => setForm({ ...form, sasaran: e.target.value })}
@@ -168,10 +184,14 @@ export default function InputLaporanPage({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="jumlahsasaran"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Jumlah Sasaran <span className="text-red-500">*</span>
               </label>
               <input
+                id="jumlahsasaran"
                 type="number"
                 value={form.jumlah}
                 onChange={(e) => setForm({ ...form, jumlah: e.target.value })}
@@ -183,10 +203,14 @@ export default function InputLaporanPage({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="lokasi"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Lokasi <span className="text-red-500">*</span>
             </label>
             <input
+              id="lokasi"
               type="text"
               value={form.lokasi}
               onChange={(e) => setForm({ ...form, lokasi: e.target.value })}
@@ -196,10 +220,14 @@ export default function InputLaporanPage({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="hasil"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Hasil Kegiatan <span className="text-red-500">*</span>
             </label>
             <textarea
+              id="hasil"
               value={form.hasil}
               onChange={(e) => setForm({ ...form, hasil: e.target.value })}
               rows={3}
@@ -209,11 +237,15 @@ export default function InputLaporanPage({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="keterangan"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Keterangan{" "}
               <span className="text-gray-400 font-normal">(opsional)</span>
             </label>
             <textarea
+              id="keterangan"
               value={form.keterangan}
               onChange={(e) => setForm({ ...form, keterangan: e.target.value })}
               rows={2}
@@ -225,7 +257,10 @@ export default function InputLaporanPage({
           {/* Lampiran */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="dokumen"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Dokumen / PDF{" "}
                 <span className="text-gray-400 font-normal">
                   (maks. 1 file)
@@ -241,13 +276,17 @@ export default function InputLaporanPage({
                   </button>
                 </div>
               ) : (
-                <label className="flex flex-col items-center gap-2 border-2 border-dashed border-gray-300 rounded p-4 cursor-pointer hover:border-green-400 transition-colors">
+                <label
+                  htmlFor="dokumen"
+                  className="flex flex-col items-center gap-2 border-2 border-dashed border-gray-300 rounded p-4 cursor-pointer hover:border-green-400 transition-colors"
+                >
                   <Upload size={20} className="text-green-500" />
                   <span className="text-xs text-green-600">
                     Klik untuk memilih file
                   </span>
                   <span className="text-xs text-gray-400">PDF, Word, dll</span>
                   <input
+                    id="dokumen"
                     type="file"
                     accept=".pdf,.doc,.docx"
                     className="hidden"
@@ -258,7 +297,10 @@ export default function InputLaporanPage({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="gambar"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Gambar / Foto{" "}
                 <span className="text-gray-400 font-normal">
                   (maks. 1 file, otomatis dikecilkan)
@@ -274,13 +316,17 @@ export default function InputLaporanPage({
                   </button>
                 </div>
               ) : (
-                <label className="flex flex-col items-center gap-2 border-2 border-dashed border-gray-300 rounded p-4 cursor-pointer hover:border-green-400 transition-colors">
+                <label
+                  htmlFor="gambar"
+                  className="flex flex-col items-center gap-2 border-2 border-dashed border-gray-300 rounded p-4 cursor-pointer hover:border-green-400 transition-colors"
+                >
                   <Upload size={20} className="text-green-500" />
                   <span className="text-xs text-green-600">
                     Klik untuk memilih foto
                   </span>
                   <span className="text-xs text-gray-400">JPG, PNG, dll</span>
                   <input
+                    id="gambar"
                     type="file"
                     accept="image/*"
                     className="hidden"

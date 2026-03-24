@@ -116,9 +116,11 @@ export default function RegisterPage({
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       <div className="bg-[#1a7a4a] text-white py-3 px-6 flex items-center gap-4">
-        <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center">
-          <span className="text-[#1a7a4a] font-bold text-xs">BKKBN</span>
-        </div>
+        <img
+          src="/assets/uploads/bkkbn-019d1e7a-bd36-77cf-b342-f26ff46cd60b-1.png"
+          alt="BKKBN Logo"
+          className="h-12 w-auto"
+        />
         <h1 className="text-lg font-bold">SISTEM LAPORAN RKH PENYULUH KB</h1>
       </div>
       <div className="flex-1 flex items-center justify-center p-4">
