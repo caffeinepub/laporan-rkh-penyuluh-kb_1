@@ -26,6 +26,32 @@ interface RiwayatLaporanPageProps {
   onEdit: (rkh: RKH) => void;
 }
 
+/** Render semua halaman PDF ke array data-URL gambar menggunakan pdfjs-dist */
+async function renderPdfToImages(pdfUrl: string): Promise<string[]> {
+  const pdfjsLib = await import("pdfjs-dist");
+  // Gunakan worker dari CDN supaya tidak perlu konfigurasi bundler
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+
+  const response = await fetch(pdfUrl);
+  const arrayBuffer = await response.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const pageImages: string[] = [];
+
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const viewport = page.getViewport({ scale: 1.5 });
+    const canvas = document.createElement("canvas");
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) continue;
+    await page.render({ canvasContext: ctx, canvas, viewport }).promise;
+    pageImages.push(canvas.toDataURL("image/jpeg", 0.92));
+  }
+
+  return pageImages;
+}
+
 export default function RiwayatLaporanPage({
   actor,
   identity,
@@ -39,6 +65,11 @@ export default function RiwayatLaporanPage({
   const [rkhList, setRkhList] = useState<RKH[]>([]);
   const [loading, setLoading] = useState(false);
   const [printingRkh, setPrintingRkh] = useState<RKH | null>(null);
+  const [printImageDataUrl, setPrintImageDataUrl] = useState<string | null>(
+    null,
+  );
+  const [printDocPageUrls, setPrintDocPageUrls] = useState<string[]>([]);
+  const [preparingPrint, setPreparingPrint] = useState(false);
 
   const loadRKH = useCallback(async () => {
     setLoading(true);
@@ -63,7 +94,11 @@ export default function RiwayatLaporanPage({
   }, [loadRKH]);
 
   useEffect(() => {
-    const handler = () => setPrintingRkh(null);
+    const handler = () => {
+      setPrintingRkh(null);
+      setPrintImageDataUrl(null);
+      setPrintDocPageUrls([]);
+    };
     window.onafterprint = handler;
     return () => {
       window.onafterprint = null;
@@ -87,12 +122,51 @@ export default function RiwayatLaporanPage({
     setTimeout(() => window.print(), 100);
   };
 
-  const handlePrintSingle = (rkh: RKH) => {
+  const handlePrintSingle = async (rkh: RKH) => {
+    setPreparingPrint(true);
+    let imageDataUrl: string | null = null;
+    let docPageUrls: string[] = [];
+
+    // Preload gambar
+    if (rkh.image) {
+      try {
+        const url = rkh.image.getDirectURL();
+        const response = await fetch(url);
+        const blob = await response.blob();
+        imageDataUrl = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
+        });
+      } catch (e) {
+        console.error("Failed to preload image", e);
+      }
+    }
+
+    // Render PDF lampiran ke gambar per halaman
+    if (rkh.document) {
+      try {
+        const pdfUrl = rkh.document.getDirectURL();
+        docPageUrls = await renderPdfToImages(pdfUrl);
+      } catch (e) {
+        console.error("Failed to render PDF pages", e);
+      }
+    }
+
+    setPrintImageDataUrl(imageDataUrl);
+    setPrintDocPageUrls(docPageUrls);
     setPrintingRkh(rkh);
+    setPreparingPrint(false);
+
+    // Tunggu React render ulang dengan data URL, baru print
     setTimeout(() => {
       window.print();
-      setTimeout(() => setPrintingRkh(null), 500);
-    }, 200);
+      setTimeout(() => {
+        setPrintingRkh(null);
+        setPrintImageDataUrl(null);
+        setPrintDocPageUrls([]);
+      }, 500);
+    }, 300);
   };
 
   const sigUrl = profile?.signature?.getDirectURL?.();
@@ -191,7 +265,6 @@ export default function RiwayatLaporanPage({
     "Ket.",
   ];
 
-  // Section header style for single report vertical layout
   const sectionHeaderStyle: React.CSSProperties = {
     backgroundColor: "#1a5276",
     color: "white",
@@ -225,11 +298,17 @@ export default function RiwayatLaporanPage({
     verticalAlign: "top",
   };
 
-  const renderSingleReport = (rkh: RKH) => {
+  const renderSingleReport = (
+    rkh: RKH,
+    imageDataUrl?: string | null,
+    docPageUrls?: string[],
+  ) => {
     const nomorLaporan = rkh.action.toString().slice(-8).toUpperCase();
     const hasImage = !!rkh.image;
     const hasDocument = !!rkh.document;
     const totalAttachments = (hasImage ? 1 : 0) + (hasDocument ? 1 : 0);
+    const imageSrc = imageDataUrl || rkh.image?.getDirectURL();
+    const pdfPages = docPageUrls ?? [];
 
     const detailRows: [string, string][] = [
       ["Nomor Laporan", nomorLaporan],
@@ -248,7 +327,7 @@ export default function RiwayatLaporanPage({
 
     return (
       <div style={{ fontFamily: "Arial, sans-serif", fontSize: "10pt" }}>
-        {/* ── PAGE 1: Header ── */}
+        {/* Header */}
         <div
           style={{
             display: "flex",
@@ -287,7 +366,7 @@ export default function RiwayatLaporanPage({
           </div>
         </div>
 
-        {/* ── IDENTITAS PENYULUH ── */}
+        {/* Identitas */}
         <div style={sectionHeaderStyle}>IDENTITAS PENYULUH</div>
         <table
           style={{
@@ -297,12 +376,14 @@ export default function RiwayatLaporanPage({
           }}
         >
           <tbody>
-            {[
-              ["Nama", profile?.namalengkap || "-"],
-              ["NIP", profile?.nip || "-"],
-              ["Unit Kerja", profile?.unitKerja || "-"],
-              ["Wilayah", profile?.wilayahKerja || "-"],
-            ].map(([label, value], i) => (
+            {(
+              [
+                ["Nama", profile?.namalengkap || "-"],
+                ["NIP", profile?.nip || "-"],
+                ["Unit Kerja", profile?.unitKerja || "-"],
+                ["Wilayah", profile?.wilayahKerja || "-"],
+              ] as [string, string][]
+            ).map(([label, value], i) => (
               <tr key={label} style={detailRowStyle(i % 2 === 0)}>
                 <td style={detailLabelStyle}>{label}</td>
                 <td
@@ -318,7 +399,7 @@ export default function RiwayatLaporanPage({
           </tbody>
         </table>
 
-        {/* ── DETAIL LAPORAN ── */}
+        {/* Detail */}
         <div style={sectionHeaderStyle}>DETAIL LAPORAN</div>
         <table
           style={{
@@ -337,7 +418,7 @@ export default function RiwayatLaporanPage({
           </tbody>
         </table>
 
-        {/* ── LAMPIRAN ── */}
+        {/* Daftar lampiran */}
         {totalAttachments > 0 && (
           <>
             <div style={sectionHeaderStyle}>LAMPIRAN</div>
@@ -375,7 +456,7 @@ export default function RiwayatLaporanPage({
           </>
         )}
 
-        {/* ── TANDA TANGAN ── */}
+        {/* Tanda tangan */}
         <div
           style={{
             marginTop: "28px",
@@ -423,8 +504,8 @@ export default function RiwayatLaporanPage({
           </div>
         </div>
 
-        {/* ── ATTACHMENT PAGES ── */}
-        {hasImage && rkh.image && (
+        {/* Lampiran foto */}
+        {hasImage && imageSrc && (
           <div style={{ pageBreakBefore: "always" }}>
             <div
               style={{
@@ -440,13 +521,51 @@ export default function RiwayatLaporanPage({
               LAMPIRAN 1 – FOTO/GAMBAR
             </div>
             <img
-              src={rkh.image.getDirectURL()}
+              src={imageSrc}
               alt="Lampiran Foto"
               style={{ maxWidth: "100%", display: "block", margin: "0 auto" }}
             />
           </div>
         )}
-        {hasDocument && rkh.document && (
+
+        {/* Lampiran PDF — ditampilkan sebagai gambar per halaman */}
+        {hasDocument &&
+          pdfPages.length > 0 &&
+          pdfPages.map((pageDataUrl, pageIdx) => (
+            <div
+              key={pageDataUrl.slice(-20)}
+              style={{ pageBreakBefore: pageIdx === 0 ? "always" : "auto" }}
+            >
+              {pageIdx === 0 && (
+                <div
+                  style={{
+                    backgroundColor: "#1a5276",
+                    color: "white",
+                    padding: "10px 16px",
+                    fontWeight: "bold",
+                    fontSize: "11pt",
+                    marginBottom: "12px",
+                    letterSpacing: "0.5px",
+                  }}
+                >
+                  LAMPIRAN {hasImage ? 2 : 1} – DOKUMEN PDF
+                </div>
+              )}
+              <img
+                src={pageDataUrl}
+                alt={`Halaman PDF ${pageIdx + 1}`}
+                style={{
+                  maxWidth: "100%",
+                  display: "block",
+                  margin: "0 auto 8px auto",
+                  pageBreakInside: "avoid",
+                }}
+              />
+            </div>
+          ))}
+
+        {/* Fallback jika PDF gagal di-render */}
+        {hasDocument && pdfPages.length === 0 && (
           <div style={{ pageBreakBefore: "always" }}>
             <div
               style={{
@@ -462,20 +581,10 @@ export default function RiwayatLaporanPage({
               LAMPIRAN {hasImage ? 2 : 1} – DOKUMEN PDF
             </div>
             <p
-              style={{
-                fontSize: "9.5pt",
-                color: "#555",
-                marginBottom: "12px",
-                fontStyle: "italic",
-              }}
+              style={{ fontSize: "9.5pt", color: "#555", fontStyle: "italic" }}
             >
-              Dokumen terlampir di bawah ini:
+              Dokumen PDF terlampir (gagal memuat pratinjau halaman).
             </p>
-            <embed
-              src={rkh.document.getDirectURL()}
-              type="application/pdf"
-              style={{ width: "100%", height: "500px" }}
-            />
           </div>
         )}
       </div>
@@ -484,7 +593,20 @@ export default function RiwayatLaporanPage({
 
   return (
     <div>
-      {/* Print area */}
+      {/* Overlay loading saat persiapan print */}
+      {preparingPrint && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg px-8 py-6 shadow-xl text-center">
+            <div className="animate-spin rounded-full h-10 w-10 border-4 border-[#1a5276] border-t-transparent mx-auto mb-3" />
+            <p className="text-gray-700 font-medium">
+              Mempersiapkan lampiran PDF...
+            </p>
+            <p className="text-gray-400 text-sm mt-1">Mohon tunggu sebentar</p>
+          </div>
+        </div>
+      )}
+
+      {/* Area print */}
       <div
         className="hidden print:block"
         style={{
@@ -494,10 +616,8 @@ export default function RiwayatLaporanPage({
         }}
       >
         {printingRkh ? (
-          /* Single report print — vertical detail layout */
-          renderSingleReport(printingRkh)
+          renderSingleReport(printingRkh, printImageDataUrl, printDocPageUrls)
         ) : (
-          /* Full gabungan print (admin only) */
           <div>
             {reportHeader}
             {profileBlock}
@@ -598,7 +718,7 @@ export default function RiwayatLaporanPage({
         )}
       </div>
 
-      {/* Screen view */}
+      {/* Tampilan layar */}
       <div className="print:hidden">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-gray-800">
