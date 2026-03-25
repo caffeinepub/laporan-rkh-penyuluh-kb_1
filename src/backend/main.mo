@@ -63,7 +63,7 @@ actor {
 
   // === STATE ===
   let userTokens = Map.empty<Principal, UserToken>();
-  var generatedTokenBase = "my-random-token";
+  var generatedTokenBase = "Lupalagi09@";
   let allProfiles = Map.empty<Principal, Profile>();
   var nextTokenId = 0;
 
