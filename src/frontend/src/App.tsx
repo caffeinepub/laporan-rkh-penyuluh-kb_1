@@ -20,8 +20,16 @@ export type Page =
   | "admin";
 
 export default function App() {
-  const { identity, isInitializing, login, clear } = useInternetIdentity();
-  const { actor } = useActor();
+  const {
+    identity,
+    isInitializing,
+    isLoggingIn,
+    isLoginError,
+    loginError,
+    login,
+    clear,
+  } = useInternetIdentity();
+  const { actor, isFetching: isActorFetching } = useActor();
   const [appState, setAppState] = useState<
     "loading" | "login" | "register" | "waiting" | "main"
   >("loading");
@@ -67,16 +75,24 @@ export default function App() {
 
   useEffect(() => {
     if (isInitializing) return;
+
     if (!identity || identity.getPrincipal().isAnonymous()) {
       setAppState("login");
       return;
     }
-    if (!actor) {
+
+    if (!actor && isActorFetching) {
       setAppState("loading");
       return;
     }
+
+    if (!actor && !isActorFetching) {
+      setAppState("login");
+      return;
+    }
+
     checkStatus();
-  }, [identity, actor, isInitializing, checkStatus]);
+  }, [identity, actor, isInitializing, isActorFetching, checkStatus]);
 
   const handleLogout = () => {
     localStorage.removeItem("rkh_access_token");
@@ -97,7 +113,16 @@ export default function App() {
   }
 
   if (appState === "login") {
-    return <LoginPage onLogin={login} />;
+    const loginErrorMsg = isLoginError
+      ? loginError?.message || "Login gagal. Silakan coba lagi."
+      : undefined;
+    return (
+      <LoginPage
+        onLogin={login}
+        isLoggingIn={isLoggingIn}
+        loginError={loginErrorMsg}
+      />
+    );
   }
 
   if (appState === "register") {
@@ -168,7 +193,6 @@ export default function App() {
           actor={actor!}
           profile={profile}
           onSaved={async () => {
-            // Re-fetch profile from backend to ensure signature blob methods are intact
             if (actor) {
               const fresh = await actor.getCallerUserProfile();
               if (fresh) setProfile(fresh);

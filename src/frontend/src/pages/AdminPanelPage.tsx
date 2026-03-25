@@ -7,6 +7,7 @@ import {
   Layers,
   Printer,
   RefreshCw,
+  Trash2,
   Users,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -50,6 +51,14 @@ export default function AdminPanelPage({ actor }: AdminPanelPageProps) {
   const [bulan, setBulan] = useState(new Date().getMonth());
   const [tahun, setTahun] = useState(new Date().getFullYear());
   const [rekapData, setRekapData] = useState<RKHWithUser[]>([]);
+
+  const [adminDeletingAction, setAdminDeletingAction] = useState<bigint | null>(
+    null,
+  );
+  const [adminDeleteToast, setAdminDeleteToast] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
 
   // Gabungkan state
   const [gabungUser, setGabungUser] = useState<string>("");
@@ -167,6 +176,33 @@ export default function AdminPanelPage({ actor }: AdminPanelPageProps) {
       console.error(e);
     } finally {
       setGabungLoading(false);
+    }
+  };
+
+  const handleAdminDeleteReport = async (item: RKHWithUser) => {
+    if (!window.confirm("Hapus laporan ini? Tindakan tidak dapat dibatalkan."))
+      return;
+    setAdminDeletingAction(item.rkh.action);
+    try {
+      await (actor as any).adminDeleteRKH(item.user, item.rkh.action);
+      setAllRkh((prev) => prev.filter((r) => r.rkh.action !== item.rkh.action));
+      setRekapData((prev) =>
+        prev.filter((r) => r.rkh.action !== item.rkh.action),
+      );
+      setAdminDeleteToast({
+        type: "success",
+        message: "Laporan berhasil dihapus.",
+      });
+      setTimeout(() => setAdminDeleteToast(null), 3000);
+    } catch (e) {
+      console.error("Gagal menghapus laporan:", e);
+      setAdminDeleteToast({
+        type: "error",
+        message: "Gagal menghapus laporan. Silakan coba lagi.",
+      });
+      setTimeout(() => setAdminDeleteToast(null), 3000);
+    } finally {
+      setAdminDeletingAction(null);
     }
   };
 
@@ -431,6 +467,17 @@ export default function AdminPanelPage({ actor }: AdminPanelPageProps) {
         </div>
       )}
 
+      {/* Toast notification */}
+      {adminDeleteToast && (
+        <div
+          className={`fixed top-4 right-4 z-50 px-4 py-3 rounded shadow-lg text-white text-sm font-medium ${
+            adminDeleteToast.type === "success" ? "bg-green-600" : "bg-red-600"
+          }`}
+        >
+          {adminDeleteToast.message}
+        </div>
+      )}
+
       <div className="bg-white rounded-lg shadow-sm overflow-hidden print:hidden">
         <div className="bg-[#1a7a4a] text-white p-4">
           <h2 className="font-bold text-lg">Panel Admin</h2>
@@ -609,6 +656,7 @@ export default function AdminPanelPage({ actor }: AdminPanelPageProps) {
                       "JML",
                       "LOKASI",
                       "HASIL",
+                      "AKSI",
                     ].map((h) => (
                       <th
                         key={h}
@@ -628,6 +676,7 @@ export default function AdminPanelPage({ actor }: AdminPanelPageProps) {
                       <tr
                         key={item.rkh.action.toString()}
                         className="hover:bg-gray-50"
+                        data-ocid={`admin.laporan.item.${idx + 1}`}
                       >
                         <td className="px-3 py-3">{idx + 1}</td>
                         <td className="px-3 py-3 text-xs">
@@ -651,13 +700,29 @@ export default function AdminPanelPage({ actor }: AdminPanelPageProps) {
                               item.rkh.completedAction}
                           </p>
                         </td>
+                        <td className="px-3 py-3">
+                          <button
+                            type="button"
+                            onClick={() => handleAdminDeleteReport(item)}
+                            disabled={adminDeletingAction === item.rkh.action}
+                            data-ocid={`admin.laporan.delete_button.${idx + 1}`}
+                            className="text-gray-400 hover:text-red-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                            title="Hapus Laporan"
+                          >
+                            {adminDeletingAction === item.rkh.action ? (
+                              <span className="inline-block w-3.5 h-3.5 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <Trash2 size={14} />
+                            )}
+                          </button>
+                        </td>
                       </tr>
                     );
                   })}
                   {allRkh.length === 0 && (
                     <tr>
                       <td
-                        colSpan={8}
+                        colSpan={9}
                         className="px-3 py-8 text-center text-gray-400"
                       >
                         Belum ada laporan
@@ -732,6 +797,7 @@ export default function AdminPanelPage({ actor }: AdminPanelPageProps) {
                         "KEGIATAN",
                         "LOKASI",
                         "JML SASARAN",
+                        "AKSI",
                       ].map((h) => (
                         <th
                           key={h}
@@ -751,6 +817,7 @@ export default function AdminPanelPage({ actor }: AdminPanelPageProps) {
                         <tr
                           key={item.rkh.action.toString()}
                           className="hover:bg-gray-50"
+                          data-ocid={`admin.rekap.item.${idx + 1}`}
                         >
                           <td className="px-3 py-3">{idx + 1}</td>
                           <td className="px-3 py-3">
@@ -766,13 +833,29 @@ export default function AdminPanelPage({ actor }: AdminPanelPageProps) {
                           <td className="px-3 py-3 text-center">
                             {item.rkh.numTargeted.toString()}
                           </td>
+                          <td className="px-3 py-3">
+                            <button
+                              type="button"
+                              onClick={() => handleAdminDeleteReport(item)}
+                              disabled={adminDeletingAction === item.rkh.action}
+                              data-ocid={`admin.rekap.delete_button.${idx + 1}`}
+                              className="text-gray-400 hover:text-red-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                              title="Hapus Laporan"
+                            >
+                              {adminDeletingAction === item.rkh.action ? (
+                                <span className="inline-block w-3.5 h-3.5 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                <Trash2 size={14} />
+                              )}
+                            </button>
+                          </td>
                         </tr>
                       );
                     })}
                     {rekapData.length === 0 && (
                       <tr>
                         <td
-                          colSpan={6}
+                          colSpan={7}
                           className="px-3 py-8 text-center text-gray-400"
                         >
                           Tidak ada data rekap

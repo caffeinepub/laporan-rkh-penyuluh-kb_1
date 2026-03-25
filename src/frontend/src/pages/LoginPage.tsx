@@ -1,8 +1,14 @@
 interface LoginPageProps {
   onLogin: () => void;
+  isLoggingIn?: boolean;
+  loginError?: string;
 }
 
-export default function LoginPage({ onLogin }: LoginPageProps) {
+export default function LoginPage({
+  onLogin,
+  isLoggingIn,
+  loginError,
+}: LoginPageProps) {
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       {/* Header */}
@@ -41,12 +47,27 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             </ol>
           </div>
 
+          {loginError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 text-sm text-red-700">
+              {loginError}
+            </div>
+          )}
+
           <button
             type="button"
             onClick={onLogin}
-            className="w-full bg-[#1a7a4a] hover:bg-green-800 text-white font-semibold py-3 px-4 rounded-lg transition-colors text-sm"
+            disabled={isLoggingIn}
+            data-ocid="login.primary_button"
+            className="w-full bg-[#1a7a4a] hover:bg-green-800 disabled:opacity-70 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
           >
-            Masuk dengan Internet Identity
+            {isLoggingIn ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Menghubungkan ke Internet Identity...
+              </>
+            ) : (
+              "Masuk dengan Internet Identity"
+            )}
           </button>
 
           <p className="text-center text-xs text-gray-400 mt-4">

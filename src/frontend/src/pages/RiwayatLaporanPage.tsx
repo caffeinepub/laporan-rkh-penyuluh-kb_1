@@ -1,5 +1,5 @@
 import type { Identity } from "@icp-sdk/core/agent";
-import { Edit3, Printer, Trash2 } from "lucide-react";
+import { CheckCircle, Edit3, Printer, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import type { RKH, UserProfile, backendInterface } from "../backend";
 
@@ -110,6 +110,15 @@ export default function RiwayatLaporanPage({
   const [printDocPageUrls, setPrintDocPageUrls] = useState<string[]>([]);
   const [preparingPrint, setPreparingPrint] = useState(false);
   const [deletingAction, setDeletingAction] = useState<bigint | null>(null);
+  const [toast, setToast] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+
+  const showToast = (type: "success" | "error", message: string) => {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 3500);
+  };
 
   const loadRKH = useCallback(async () => {
     setLoading(true);
@@ -171,8 +180,10 @@ export default function RiwayatLaporanPage({
     try {
       await (actor as any).deleteRKH(rkh.action);
       await loadRKH();
+      showToast("success", "Laporan berhasil dihapus.");
     } catch (e) {
       console.error("Gagal menghapus laporan:", e);
+      showToast("error", "Gagal menghapus laporan. Silakan coba lagi.");
     } finally {
       setDeletingAction(null);
     }
@@ -638,6 +649,30 @@ export default function RiwayatLaporanPage({
 
   return (
     <div>
+      {/* Toast notification */}
+      {toast && (
+        <div
+          className={`fixed top-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium transition-all ${
+            toast.type === "success" ? "bg-green-600" : "bg-red-600"
+          }`}
+          data-ocid="riwayat.toast"
+        >
+          {toast.type === "success" ? (
+            <CheckCircle size={16} />
+          ) : (
+            <X size={16} />
+          )}
+          <span>{toast.message}</span>
+          <button
+            type="button"
+            onClick={() => setToast(null)}
+            className="ml-2 opacity-75 hover:opacity-100"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       {preparingPrint && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg px-8 py-6 shadow-xl text-center">
@@ -931,12 +966,16 @@ export default function RiwayatLaporanPage({
                           <button
                             type="button"
                             onClick={() => handleDelete(rkh)}
-                            className="text-gray-400 hover:text-red-600 disabled:opacity-40"
+                            className="text-gray-400 hover:text-red-600 disabled:opacity-40 disabled:cursor-not-allowed"
                             title="Hapus Laporan"
                             disabled={deletingAction === rkh.action}
                             data-ocid={`riwayat.delete_button.${idx + 1}`}
                           >
-                            <Trash2 size={14} />
+                            {deletingAction === rkh.action ? (
+                              <span className="inline-block w-3.5 h-3.5 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <Trash2 size={14} />
+                            )}
                           </button>
                         </div>
                       </td>

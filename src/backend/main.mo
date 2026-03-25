@@ -164,7 +164,7 @@ actor {
     allRKHData.add(caller, existingRKHData);
   };
 
-  // (3b) Delete RKH by action id
+  // (3b) Delete RKH by action id (user deletes own report)
   public shared ({ caller }) func deleteRKH(actionId : Action) : async () {
     if (not (UserApproval.isApproved(approvalState, caller) or AccessControl.hasPermission(accessControlState, caller, #admin))) {
       Runtime.trap("Unauthorized: Token not verified. Please contact admin");
@@ -176,6 +176,23 @@ actor {
           func(rkh : RKH) : Bool { rkh.action != actionId }
         );
         allRKHData.add(caller, filtered);
+      };
+      case (null) {};
+    };
+  };
+
+  // (3c) Admin delete RKH for a specific user
+  public shared ({ caller }) func adminDeleteRKH(user : Principal, actionId : Action) : async () {
+    if (not AccessControl.hasPermission(accessControlState, caller, #admin)) {
+      Runtime.trap("Unauthorized: Only admins can delete reports for other users");
+    };
+
+    switch (allRKHData.get(user)) {
+      case (?existingRKHData) {
+        let filtered = existingRKHData.filter(
+          func(rkh : RKH) : Bool { rkh.action != actionId }
+        );
+        allRKHData.add(user, filtered);
       };
       case (null) {};
     };
