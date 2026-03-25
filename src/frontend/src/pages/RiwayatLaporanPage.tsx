@@ -165,6 +165,13 @@ export default function RiwayatLaporanPage({
 
   const getKegiatan = (ca: string) => ca.split("||")[0] || ca;
   const getHasil = (ca: string) => ca.split("||")[1] || ca;
+  const parseRemarks = (r?: string) => {
+    if (!r) return { metode: "", keterangan: "" };
+    const parts = r.split("||");
+    if (parts.length >= 2)
+      return { metode: parts[0] || "", keterangan: parts[1] || "" };
+    return { metode: "", keterangan: r };
+  };
 
   const handlePrint = () => {
     setPrintingRkh(null);
@@ -178,7 +185,7 @@ export default function RiwayatLaporanPage({
     if (!confirmed) return;
     setDeletingAction(rkh.action);
     try {
-      await (actor as any).deleteRKH(rkh.action);
+      await actor.deleteRKH(rkh.action);
       await loadRKH();
       showToast("success", "Laporan berhasil dihapus.");
     } catch (e) {
@@ -326,6 +333,7 @@ export default function RiwayatLaporanPage({
     "Jumlah",
     "Lokasi",
     "Hasil Kegiatan",
+    "Metode Kegiatan",
     "Ket.",
   ];
 
@@ -374,19 +382,20 @@ export default function RiwayatLaporanPage({
     const imageSrc = imageDataUrl || rkh.image?.getDirectURL();
     const pdfPages = docPageUrls ?? [];
 
+    const { metode: rkhMetode, keterangan: rkhKeterangan } = parseRemarks(
+      rkh.remarks,
+    );
     const detailRows: [string, string][] = [
       ["Nomor Laporan", nomorLaporan],
       ["Tanggal", formatDate(rkh.date)],
       ["Nama Kegiatan", getKegiatan(rkh.completedAction)],
       ["Hasil Kegiatan", getHasil(rkh.completedAction)],
       ["Nama Register / Sasaran", rkh.targetGroup],
-      ["Indikator Keberhasilan", rkh.targetGroup],
       ["Volume / Jumlah", rkh.numTargeted.toString()],
-      ["Metode Kegiatan", "-"],
+      ["Metode Kegiatan", rkhMetode || "-"],
       ["Lokasi Kegiatan", rkh.place],
       ["Waktu Pelaksanaan", formatDate(rkh.date)],
-      ["Sumber Dana", "-"],
-      ["Keterangan", rkh.remarks || "-"],
+      ["Keterangan", rkhKeterangan || "-"],
     ];
 
     return (
@@ -771,14 +780,19 @@ export default function RiwayatLaporanPage({
                     <td
                       style={{ border: "1px solid #ccc", padding: "4px 6px" }}
                     >
-                      {rkh.remarks || ""}
+                      {parseRemarks(rkh.remarks).metode || ""}
+                    </td>
+                    <td
+                      style={{ border: "1px solid #ccc", padding: "4px 6px" }}
+                    >
+                      {parseRemarks(rkh.remarks).keterangan || ""}
                     </td>
                   </tr>
                 ))}
                 {rkhList.length === 0 && (
                   <tr>
                     <td
-                      colSpan={8}
+                      colSpan={9}
                       style={{
                         border: "1px solid #ccc",
                         padding: "12px",

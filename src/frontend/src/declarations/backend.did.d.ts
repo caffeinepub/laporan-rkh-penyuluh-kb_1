@@ -95,6 +95,8 @@ export interface _SERVICE {
   '_caffeineStorageUpdateGatewayPrincipals' : ActorMethod<[], undefined>,
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'addRKH' : ActorMethod<[RKH], undefined>,
+  'adminDeleteRKH' : ActorMethod<[Principal, Action], undefined>,
+  'deleteRKH' : ActorMethod<[Action], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'generateUserToken' : ActorMethod<[Principal], string>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,

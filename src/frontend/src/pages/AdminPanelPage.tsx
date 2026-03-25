@@ -184,7 +184,7 @@ export default function AdminPanelPage({ actor }: AdminPanelPageProps) {
       return;
     setAdminDeletingAction(item.rkh.action);
     try {
-      await (actor as any).adminDeleteRKH(item.user, item.rkh.action);
+      await actor.adminDeleteRKH(item.user, item.rkh.action);
       setAllRkh((prev) => prev.filter((r) => r.rkh.action !== item.rkh.action));
       setRekapData((prev) =>
         prev.filter((r) => r.rkh.action !== item.rkh.action),

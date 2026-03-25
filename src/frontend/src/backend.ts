@@ -171,6 +171,8 @@ export interface backendInterface {
     _caffeineStorageUpdateGatewayPrincipals(): Promise<void>;
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
     addRKH(rkh: RKH): Promise<void>;
+    adminDeleteRKH(user: Principal, actionId: Action): Promise<void>;
+    deleteRKH(actionId: Action): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     generateUserToken(user: Principal): Promise<string>;
     getCallerUserProfile(): Promise<UserProfile | null>;
@@ -305,6 +307,34 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.addRKH(await to_candid_RKH_n8(this._uploadFile, this._downloadFile, arg0));
+            return result;
+        }
+    }
+    async adminDeleteRKH(arg0: Principal, arg1: Action): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.adminDeleteRKH(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.adminDeleteRKH(arg0, arg1);
+            return result;
+        }
+    }
+    async deleteRKH(arg0: Action): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.deleteRKH(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.deleteRKH(arg0);
             return result;
         }
     }

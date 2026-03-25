@@ -15,6 +15,15 @@ const parseKegiatan = (ca: string) => {
   return { kegiatan: parts[0] || "", hasil: parts[1] || "" };
 };
 
+const parseRemarks = (r?: string) => {
+  if (!r) return { metode: "", keterangan: "" };
+  const parts = r.split("||");
+  if (parts.length >= 2)
+    return { metode: parts[0] || "", keterangan: parts[1] || "" };
+  // legacy: no separator, treat as keterangan only
+  return { metode: "", keterangan: r };
+};
+
 export default function InputLaporanPage({
   actor,
   editingRkh,
@@ -30,6 +39,7 @@ export default function InputLaporanPage({
     jumlah: "",
     lokasi: "",
     hasil: "",
+    metode: "",
     keterangan: "",
   });
   const [docFile, setDocFile] = useState<File | null>(null);
@@ -40,6 +50,7 @@ export default function InputLaporanPage({
   const initForm = useCallback(() => {
     if (editingRkh) {
       const { kegiatan, hasil } = parseKegiatan(editingRkh.completedAction);
+      const { metode, keterangan } = parseRemarks(editingRkh.remarks);
       const dateMs = Number(editingRkh.date / BigInt(1_000_000));
       const d = new Date(dateMs);
       const dateStr = d.toISOString().split("T")[0];
@@ -50,7 +61,8 @@ export default function InputLaporanPage({
         jumlah: editingRkh.numTargeted.toString(),
         lokasi: editingRkh.place,
         hasil,
-        keterangan: editingRkh.remarks || "",
+        metode,
+        keterangan,
       });
     }
   }, [editingRkh]);
@@ -90,6 +102,9 @@ export default function InputLaporanPage({
       const dateObj = new Date(`${form.tanggal}T00:00:00`);
       const dateNs = BigInt(dateObj.getTime()) * BigInt(1_000_000);
 
+      // Pack metode and keterangan into remarks
+      const remarksValue = `${form.metode}||${form.keterangan}`;
+
       const rkh: RKH = {
         action: editingRkh ? editingRkh.action : BigInt(Date.now()),
         date: dateNs,
@@ -97,11 +112,14 @@ export default function InputLaporanPage({
         numTargeted: BigInt(Number.parseInt(form.jumlah) || 0),
         place: form.lokasi,
         completedAction: `${form.kegiatan}||${form.hasil}`,
-        remarks: form.keterangan || undefined,
+        remarks: remarksValue || undefined,
         document: docBlob,
         image: imgBlob,
       };
 
+      if (editingRkh) {
+        await actor.deleteRKH(editingRkh.action);
+      }
       await actor.addRKH(rkh);
       onSaved();
     } catch (err) {
@@ -233,6 +251,24 @@ export default function InputLaporanPage({
               rows={3}
               className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-green-500 resize-none"
               placeholder="Deskripsikan hasil yang dicapai..."
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="metode"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Metode Kegiatan{" "}
+              <span className="text-gray-400 font-normal">(opsional)</span>
+            </label>
+            <input
+              id="metode"
+              type="text"
+              value={form.metode}
+              onChange={(e) => setForm({ ...form, metode: e.target.value })}
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-green-500"
+              placeholder="Contoh: Ceramah, Diskusi, Penyuluhan"
             />
           </div>
 
